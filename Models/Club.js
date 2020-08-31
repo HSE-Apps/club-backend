@@ -69,6 +69,10 @@ const Club = new mongoose.Schema({
             type: [mongoose.Schema.ObjectId],
             default: []
         }
+    },
+    announcements:{
+        type: [mongoose.Schema.ObjectId],
+        default: []
     }
 
 

@@ -1,6 +1,6 @@
 const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 
-const client = new SecretManagerServiceClient()
+const client = new SecretManagerServiceClient({keyFile: './key.json'})
 
 exports.config = {}
 

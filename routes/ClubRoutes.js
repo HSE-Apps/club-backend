@@ -4,7 +4,10 @@ const mongoose = require('mongoose')
 const axios = require('axios')
 const dotenv = require('dotenv')
 dotenv.config()
+
 const Club = require('../Models/Club')
+const Announcement = require('../Models/Announcement')
+
 const auth = require('../middleware/auth')
 const clubRole = require('../middleware/clubRole')
 
@@ -74,13 +77,13 @@ router.get('/:clubURL/members', clubRole(), async(req,res) => {
 
 // * Sends SMS announcement to club members with phone number and notifications on
 
-router.post('/:clubURL/announce', auth(), clubRole({authLevel: 'officer'}), async(req,res) => {
+router.post('/:clubURL/announcement', auth(), clubRole({authLevel: 'officer'}), async(req,res) => {
 
     try {
 
         const{club, requester} = res.locals
 
-        const message = `${club.name} | ${requester.name} \n${req.body.message}`
+        const smsMessage = `${club.name} | ${requester.name} \n${req.body.message}`
 
         let idList = club.officers.concat(club.members)
 
@@ -89,7 +92,16 @@ router.post('/:clubURL/announce', auth(), clubRole({authLevel: 'officer'}), asyn
         })
 
         
-        await axios.post(`${AUTH_API}/phone/aggregate`, {idList, message})
+        await axios.post(`${AUTH_API}/phone/aggregate`, {idList, smsMessage})
+
+
+
+        const announcement = new Announcement({club: club._id, seen: [], message: req.body.message })
+
+        club.announcements.push(announcement)
+
+        club.save()
+        announcement.save()
 
         res.send('Success')
 
@@ -100,6 +112,27 @@ router.post('/:clubURL/announce', auth(), clubRole({authLevel: 'officer'}), asyn
 
     }
 
+})
+
+
+
+router.get('/:clubURL/announcement', auth(), clubRole({authLevel: 'member'}),  async (req,res) => {
+    try {
+
+        const {club, requester} = res.locals
+
+        console.log(club.announcements)
+        const announcements = await Announcement.find({_id : {$in: club.announcements}})
+
+
+        await Announcement.updateMany({club: club._id}, {$addToSet: {seen: requester._id}})
+
+        res.json({announcements})
+
+
+    } catch (err) {
+
+    }
 })
 
 
