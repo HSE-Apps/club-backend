@@ -5,11 +5,15 @@ const Announcement = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true
     },
-    seen:{
-        type: [mongoose.Schema.Types.ObjectId],
-        default: []
-    },
     message:{
+        type: String,
+        required: true
+    },
+    date:{
+        type: Date,
+        default: Date.now()
+    },
+    senderName:{
         type: String,
         required: true
     }

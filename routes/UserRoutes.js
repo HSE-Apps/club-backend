@@ -46,4 +46,25 @@ router.get('/clubs', auth(), async(req, res) => {
 
 })
 
+router.get('/clubAnnouncements', auth(), async(req, res) => {
+
+  const {requester} = res.locals
+
+  try{
+    const clubUser = await User.findById(requester._id)
+
+    const clubs = await Club.find({_id: {$in: clubUser.clubs}})
+
+
+
+    const announcements = await Announcement.find({_id : {$in: club.announcements}})
+
+
+    res.json(clubs)
+  } catch (err) {
+    return res.json({'errors': [{"msg": "Server Error"}]}).status(500)
+  }
+
+})
+
 module.exports = router

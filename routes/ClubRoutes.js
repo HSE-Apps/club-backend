@@ -79,6 +79,8 @@ router.get('/:clubURL/members', clubRole(), async(req,res) => {
 
 router.post('/:clubURL/announcement', auth(), clubRole({authLevel: 'officer'}), async(req,res) => {
 
+    console.log('hit')
+
     try {
 
         const{club, requester} = res.locals
@@ -91,19 +93,23 @@ router.post('/:clubURL/announcement', auth(), clubRole({authLevel: 'officer'}), 
             idList = idList.filter((id) => !id.equals(smsDisabledId))
         })
 
+        console.log(idList)
+
         
-        await axios.post(`${AUTH_API}/phone/aggregate`, {idList, smsMessage})
+        await axios.post(`${AUTH_API}/phone/aggregate`, {idList, message: smsMessage})
 
 
 
-        const announcement = new Announcement({club: club._id, seen: [], message: req.body.message })
+        const announcement = new Announcement({club: club._id, seen: [], message: req.body.message, senderName:requester.name, date: Date.now() })
+
+
 
         club.announcements.push(announcement)
 
         club.save()
         announcement.save()
 
-        res.send('Success')
+        res.send(club)
 
     } catch (err) {
 
@@ -121,12 +127,10 @@ router.get('/:clubURL/announcement', auth(), clubRole({authLevel: 'member'}),  a
 
         const {club, requester} = res.locals
 
-        console.log(club.announcements)
         const announcements = await Announcement.find({_id : {$in: club.announcements}})
 
 
-        await Announcement.updateMany({club: club._id}, {$addToSet: {seen: requester._id}})
-
+        club.save()
         res.json({announcements})
 
 
@@ -135,6 +139,24 @@ router.get('/:clubURL/announcement', auth(), clubRole({authLevel: 'member'}),  a
     }
 })
 
+
+
+router.put('/:clubURL/announcement', auth(), clubRole({authLevel: 'member'}),  async (req,res) => {
+    console.log('marked read')
+    try {
+
+        const {club, requester} = res.locals
+
+        club.announcementViewDate = {...club.announcementViewDate, [requester._id] : Date.now()}
+
+        club.save()
+        res.json(club)
+
+
+    } catch (err) {
+
+    }
+})
 
 // * User requests to join / joins club
 

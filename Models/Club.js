@@ -73,8 +73,11 @@ const Club = new mongoose.Schema({
     announcements:{
         type: [mongoose.Schema.ObjectId],
         default: []
+    },
+    announcementViewDate:{
+        type: Object,
+        default: {}
     }
-
 
 })
 
