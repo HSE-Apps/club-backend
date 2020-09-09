@@ -502,7 +502,7 @@ router.post('/',
         const {requester} = res.locals
         const{name, description, getInvolved, url, color, tags, tagline, settings, logo, contact} = req.body
 
-        if(club.tags.length == 0){
+        if(tags.length == 0){
             return res.status(400).json({'errors': [{"msg": "Please add tags to make your club easily searchable"}]})
         }
 
