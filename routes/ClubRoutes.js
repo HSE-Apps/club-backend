@@ -506,6 +506,10 @@ router.post('/',
             return res.status(400).json({'errors': [{"msg": "Please add tags to make your club easily searchable"}]})
         }
 
+        if(requester.role == "student"){
+            return res.status(400).json({'errors': [{"msg": "You can't create a club as a student yet"}]})
+        }
+
         try{
             const nameUsed = await Club.findOne({name: name})
             const urlUsed = await Club.findOne({url: url})
