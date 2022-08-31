@@ -1,0 +1,30 @@
+name: GoogleDeploy
+
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+
+jobs:
+  job_id:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - id: 'deploy'
+      uses: 'google-github-actions/deploy-appengine@v0'
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        
+
+    - id: 'finish'
+      run: 'curl "${{ steps.deploy.outputs.url }}"'
