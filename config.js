@@ -18,5 +18,5 @@ exports.setConfig = async () => {
         console.log(err) 
     }
 
-    exports.config.MONGO_URI = mongoURL
+
 }
