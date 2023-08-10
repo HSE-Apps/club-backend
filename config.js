@@ -1,6 +1,6 @@
-/* const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
+const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 
-const client = new SecretManagerServiceClient() */
+const client = new SecretManagerServiceClient()
 const dotenv = require('dotenv')
 dotenv.config()
 //const mongoURL = process.env.MONGO_URI
