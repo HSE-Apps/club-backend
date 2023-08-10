@@ -31,7 +31,7 @@ app.use('/user/', userRoutes)
 
 
 app.get('/', (req,res) => {
- res.send("root route testing")
+ res.send("root route testing new app 2023 fr")
 })
 
 
