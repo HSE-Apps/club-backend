@@ -70,7 +70,7 @@ router.get('/:clubURL/members', auth(),clubRole(), async(req,res) => {
 
     } catch (error) {
 
-        console.log(error)
+        console.log("failed to get all members of the")
         res.status(500).json({'errors': [{"msg": "Server Error"}]})
 
     }
@@ -136,7 +136,8 @@ router.get('/:clubURL/announcement', auth(), clubRole({authLevel: 'member'}),  a
 
 
     } catch (err) {
-
+        console.log(err)
+        return res.status(500).json({'errors': [{"msg": "Server Error"}]})
     }
 })
 

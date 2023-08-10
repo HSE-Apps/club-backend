@@ -26,11 +26,27 @@ router.post("/", auth(), async (req,res)=>{
       }
 
     } catch(err){
+      console.log(err)
       return res.json({'errors': [{"msg": "Server Error"}]}).status(500)
     }
     
 
 })
+
+router.post("/bulk", auth(), async (req, res) => {
+  const { idList } = req.body;
+
+  try {
+      const users = await User.find({
+          msId: { $in: idList }
+      });
+
+      return res.json(users);
+
+  } catch (err) {
+      return res.status(500).json({ 'errors': [{ "msg": "Server Error" }] });
+  }
+});
 
 router.post('/clubs', auth(), async(req, res) => {
  try{

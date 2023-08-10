@@ -1,7 +1,9 @@
 /* const {SecretManagerServiceClient} = require('@google-cloud/secret-manager');
 
 const client = new SecretManagerServiceClient() */
-
+const dotenv = require('dotenv')
+dotenv.config()
+const mongoURL = process.env.MONGO_URI
 exports.config = {}
 
 exports.setConfig = async () => {
@@ -16,5 +18,5 @@ exports.setConfig = async () => {
         console.log(err) 
     } */
 
-    exports.config.MONGO_URI = "mongodb+srv://gcp:zO5PH8qquB5nP9De@cluster0.ikms4zd.mongodb.net/ClubData?retryWrites=true&w=majority"
+    exports.config.MONGO_URI = mongoURL
 }
