@@ -37,7 +37,7 @@ const Club = new mongoose.Schema({
         default: {}
     },
     officers: {
-        type: [mongoose.Schema.ObjectId],
+        type: [String],
         default: []
     },
     url:{
@@ -60,7 +60,7 @@ const Club = new mongoose.Schema({
         type: String
     },
     applicants:{
-        type: [mongoose.Schema.ObjectId],
+        type: [String],
         default: []
     },
     settings:{

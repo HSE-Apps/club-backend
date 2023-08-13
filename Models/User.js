@@ -6,6 +6,11 @@ const User = new mongoose.Schema({
         required: true,
         default: "None",
       },
+      name:{
+        type: String,
+        required: true,
+        default: "None"
+    },
     clubs:{
         type: [mongoose.Schema.ObjectId],
         required: false

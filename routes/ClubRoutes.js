@@ -59,22 +59,52 @@ router.get('/:clubURL',auth(),clubRole(),async(req,res) => {
 router.get('/:clubURL/members', auth(),clubRole(), async(req,res) => {
     try {
 
+      
         const {club} = res.locals
-
-        const { data : officers } = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.officers})
-        const { data : members} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.members})
-        const { data : sponsors} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.sponsors})
-        const { data : applicants} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.applicants})
-
-        res.json({officers,  members, sponsors,  applicants})
+        console.log(club.members)
+        const members = await User.find({ msId: { $in: club.members } });
+        const sponsors = await User.find({ msId: { $in: club.sponsors } });
+        const officers = await User.find({ msId: { $in: club.officers } });
+        const applicant = await User.find({ msId: { $in: club.applicants } });
+        // const { data : officers } = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.officers})
+        // const { data : members} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.members})
+        // const { data : sponsors} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.sponsors})
+        // const { data : applicants} = await axios.post(`${AUTH_API}/user/aggregate`, {idList: club.applicants})
+        console.log(members)
+        res.json({
+            sponsors:sponsors,
+            officers:officers,
+            members:members,
+            applicants:applicant
+         })
 
     } catch (error) {
 
         console.log("failed to get all members of the")
+        console.log(error)
         res.status(500).json({'errors': [{"msg": "Server Error"}]})
 
     }
 })
+router.get('/:clubURL/applicants', auth(),clubRole(), async(req,res) => {
+    try {
+
+      
+        const {club} = res.locals
+        const members = await User.find({ msId: { $in: club.applicants } });
+        res.json({
+            applicants:members,
+         })
+
+    } catch (error) {
+
+        console.log("failed to get all members of the")
+        console.log(error)
+        res.status(500).json({'errors': [{"msg": "Server Error"}]})
+
+    }
+})
+
 
 // * Sends SMS announcement to club members with phone number and notifications on
 
@@ -185,21 +215,19 @@ router.post("/:clubURL/members/", auth(), clubRole(), async (req, res) => {
     }
 
     
-    user.clubs.push( new mongoose.Types.ObjectId(club._id))
-    console.log(user.msId)
-    club.members.push(user.msId.toString())
+    
       
-    // if(club.settings.autoJoin){
+    if(club.settings.autoJoin){
             
-    //     user.clubs.push( new mongoose.Types.ObjectId(club._id))
-    //     club.members.push(new mongoose.Types.ObjectId(user._id))
+        user.clubs.push( new mongoose.Types.ObjectId(club._id))
+        club.members.push(user.msId.toString())
 
-    // } else {
+    } else {
         
-    //     user.pendingClubs.push( new mongoose.Types.ObjectId(club._id))
-    //     club.applicants.push(new mongoose.Types.ObjectId(user._id))
+        user.pendingClubs.push( new mongoose.Types.ObjectId(club._id))
+        club.applicants.push(user.msId.toString())
 
-    // }
+    }
       
   
       user.save();
@@ -214,7 +242,7 @@ router.post("/:clubURL/members/", auth(), clubRole(), async (req, res) => {
   
 
 // Accepts member into club
-router.put('/:clubURL/members/:id/accept', auth(), clubRole({authLevel: "officer"}), async (req, res) => {
+router.put('/:clubURL/members/:id/accept', auth(), clubRole(), async (req, res) => {
 
     try{
 
@@ -222,19 +250,17 @@ router.put('/:clubURL/members/:id/accept', auth(), clubRole({authLevel: "officer
 
         const {id : idToAccept} = req.params
 
-        if(inClub(club, idToAccept)){
+        if(club.members.includes(idToAccept)||club.officers.includes(idToAccept)){
             return res.status(400).json({'errors': [{"msg": "Already in club"}]})
-        } else if(!isRole('applicant', club, idToAccept)){
-            return res.status(400).json({'errors': [{"msg": "User is not an applicant"}]})
-        }
+        } 
         
         const userToAccept = await User.findById(idToAccept)
-
+        console.log("userToAccept")
         userToAccept.clubs.push( new mongoose.Types.ObjectId(club._id))
         userToAccept.pendingClubs = userToAccept.pendingClubs.filter((clubID) => !club._id.equals(clubID))
 
-        club.members.push(new mongoose.Types.ObjectId(idToAccept))
-        club.applicants = club.applicants.filter((userId) => !userId.equals(idToAccept))
+        club.members.push(idToAccept)
+        club.applicants = club.applicants.filter((userId) => userId!==idToAccept)
 
         userToAccept.save()
         club.save()
@@ -253,7 +279,7 @@ router.put('/:clubURL/members/:id/accept', auth(), clubRole({authLevel: "officer
 
 // Promotes Member
 
-router.put('/:clubURL/members/:id/promote', auth(), clubRole({authLevel: "officer"}), async (req, res) => {
+router.put('/:clubURL/members/:id/promote', auth(),clubRole(), async (req, res) => {
 
     try{
 
@@ -261,13 +287,14 @@ router.put('/:clubURL/members/:id/promote', auth(), clubRole({authLevel: "office
 
         const {id : idToPromote} = req.params
 
-        if(!isRole('member',club, idToPromote)){
+        if(club.officers.includes(idToPromote)){
             return res.status(400).json({'errors': [{"msg": "You can only promote club members"}]})
         }
 
+        
+        club.officers.push(idToPromote)
+        club.members = club.members.filter((userId) => userId !== idToPromote);
 
-        club.officers.push(new mongoose.Types.ObjectId(idToPromote))
-        club.members = club.members.filter((userId) => !userId.equals(idToPromote))
 
         club.save()
         res.json(club)
@@ -283,7 +310,7 @@ router.put('/:clubURL/members/:id/promote', auth(), clubRole({authLevel: "office
 
 // Demotes Member
 
-router.put('/:clubURL/members/:id/demote', auth(), clubRole({authLevel: "sponsor"}), async (req, res) => {
+router.put('/:clubURL/members/:id/demote', auth(), clubRole(), async (req, res) => {
 
     try{
 
@@ -292,13 +319,13 @@ router.put('/:clubURL/members/:id/demote', auth(), clubRole({authLevel: "sponsor
         const {id : idToDemote} = req.params
 
 
-        if(!isRole('officer',club, idToDemote)){
+        if(club.members.includes(idToDemote)){
             return res.status(400).json({'errors': [{"msg": "You can only demote club officers"}]})
         }
 
 
-        club.members.push(new mongoose.Types.ObjectId(idToDemote))
-        club.officers = club.officers.filter((userId) => !userId.equals(idToDemote))
+        club.members.push(idToDemote)
+        club.officers = club.officers.filter((userId) => userId !== idToDemote);
 
         club.save()
 
@@ -316,40 +343,47 @@ router.put('/:clubURL/members/:id/demote', auth(), clubRole({authLevel: "sponsor
 
 // Kicks User From Club
 
-router.delete('/:clubURL/members/:id', auth(),clubRole({authLevel: "officer"}), async (req, res) => {
+router.delete('/:clubURL/members/:msId', auth(), clubRole(), async (req, res) => {
+    try {
+        const { club } = res.locals;
+        const { msId: msIdToKick } = req.params;
+        
+        // Find the user to be kicked based on msId
+        const userToKick = await User.findOne({ msId: msIdToKick });
 
-    try{
-
-        const {club} = res.locals
-
-        const {id : idToKick} = req.params
-
-        if(!inClub(club, idToKick)){
-            return res.status(400).json({'errors': [{"msg": "You can only kick students in the club"}]})
-        } else if(isRole('sponsor',club, idToKick)){
-            return res.status(400).json({'errors': [{"msg": "You can't kick a sponsor"}]})
+        if (!userToKick) {
+            return res.status(400).json({ 'errors': [{ "msg": "User not found" }] });
+        }
+        console.log(!club.members.includes(userToKick.msId) && !club.officers.includes(userToKick.msId))
+        // Check if user is in the club
+        if (!club.members.includes(userToKick.msId) && !club.officers.includes(userToKick.msId)) {
+            return res.status(400).json({ 'errors': [{ "msg": "You can only kick students in the club" }] });
         }
 
-        const userToKick = await User.findById(idToKick)
+        // Check if user is a sponsor
+        if (club.sponsors.includes(userToKick._id)) {
+            return res.status(400).json({ 'errors': [{ "msg": "You can't kick a sponsor" }] });
+        }
+        console.log(club.sponsors.includes(userToKick._id))
 
-        userToKick.clubs = userToKick.clubs.filter((clubID) => !club._id.equals(clubID) )
-        userToKick.save()
-        
+       // Remove the club from the user's club list
+        userToKick.clubs = userToKick.clubs.filter(clubID => !club._id.equals(clubID));
+        console.log(userToKick.clubs)
+        await userToKick.save();
 
-        club.members = club.members.filter((memberId) => !memberId.equals(idToKick))
-        club.officers = club.officers.filter((memberId) => !memberId.equals(idToKick))
+        // // Remove the user from the club's members and officers lists
+        club.members = club.members.filter(memberId => !memberId.equals(userToKick._id));
+        club.officers = club.officers.filter(officerId => !officerId.equals(userToKick._id));
+        await club.save();
+        console.log(userToKick)
+        res.json(club);
 
-
-        club.save()
-
-        res.json(club)
-
-    } catch(err) {
-        return res.status(500).json({'errors': [{"msg": "Server Error"}]})
-
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ 'errors': [{ "msg": "Server Error" }] });
     }
+});
 
-})
 
 
 // User leave route 
@@ -434,13 +468,14 @@ router.put('/:clubURL/settings/sms', auth(), clubRole({authLevel: 'member'}), as
 // Club Update 
 // TODO: CLEAN UP ROUTE
 
-router.put('/:clubURL', auth(), clubRole({authLevel: "officer"}), async (req,res) => {
+router.put('/:clubURL', auth(), async (req,res) => {
 
     const {club} = res.locals
 
-    const {name, description, getInvolved, color, tags, logo, tagline, contact, titles, settings} = req.body
+    const {name, description, getInvolved, color, tags, logo, tagline, contact, titles, settings,youtube} = req.body
 
-    console.log(contact)
+    console.log(req.body)
+    console.log(club)
 
     try{    
 
@@ -487,6 +522,7 @@ router.put('/:clubURL', auth(), clubRole({authLevel: "officer"}), async (req,res
             if(settings){
                 club.settings = settings
             }
+           
             club.save()
             res.send(club)
 

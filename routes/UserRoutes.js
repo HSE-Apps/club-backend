@@ -13,13 +13,14 @@ router.post("/", auth(), async (req,res)=>{
       const clubData = await User.findOne({
         msId: requester.user.localAccountId,
       }) 
+    
 
       if(clubData){
 
 
         return res.json({...requester, clubData})
       } else {
-        const newUser = new User({ msId: requester.user.localAccountId });
+        const newUser = new User({ msId: requester.user.localAccountId, name: requester.user.name });
         console.log(newUser);
         newUser.save();
         return res.json({...requester, newUser})
@@ -33,20 +34,7 @@ router.post("/", auth(), async (req,res)=>{
 
 })
 
-router.post("/bulk", auth(), async (req, res) => {
-  const { idList } = req.body;
 
-  try {
-      const users = await User.find({
-          msId: { $in: idList }
-      });
-
-      return res.json(users);
-
-  } catch (err) {
-      return res.status(500).json({ 'errors': [{ "msg": "Server Error" }] });
-  }
-});
 
 router.post('/clubs', auth(), async(req, res) => {
  try{
