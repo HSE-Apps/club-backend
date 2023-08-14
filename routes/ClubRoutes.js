@@ -254,7 +254,11 @@ router.put('/:clubURL/members/:id/accept', auth(), clubRole(), async (req, res) 
             return res.status(400).json({'errors': [{"msg": "Already in club"}]})
         } 
         
-        const userToAccept = await User.findById(idToAccept)
+        const userToAccept = await User.findOne({
+            msId: idToAccept
+          });
+      
+        
         console.log("userToAccept")
         userToAccept.clubs.push( new mongoose.Types.ObjectId(club._id))
         userToAccept.pendingClubs = userToAccept.pendingClubs.filter((clubID) => !club._id.equals(clubID))
