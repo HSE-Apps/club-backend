@@ -268,7 +268,7 @@ router.put('/:clubURL/members/:id/accept', auth(), clubRole(), async (req, res) 
 
         userToAccept.save()
         club.save()
-
+          console.log(club)
         res.json(club)
 
     } catch(err) {
@@ -301,6 +301,7 @@ router.put('/:clubURL/members/:id/promote', auth(),clubRole(), async (req, res) 
 
 
         club.save()
+        console.log(club)
         res.json(club)
 
     } catch(err) {
@@ -472,7 +473,7 @@ router.put('/:clubURL/settings/sms', auth(), clubRole({authLevel: 'member'}), as
 // Club Update 
 // TODO: CLEAN UP ROUTE
 
-router.put('/:clubURL', auth(), async (req,res) => {
+router.put('/:clubURL', auth(),clubRole(), async (req,res) => {
 
     const {club} = res.locals
 
