@@ -477,7 +477,7 @@ router.put('/:clubURL', auth(),clubRole(), async (req,res) => {
 
     const {club} = res.locals
 
-    const {name, description, getInvolved, color, tags, logo, tagline, contact, titles, settings,youtube} = req.body
+    const {name, description, getInvolved, color, tags, logo, tagline, contact, titles, settings,displayImg} = req.body
 
     console.log(req.body)
     console.log(club)
@@ -527,6 +527,11 @@ router.put('/:clubURL', auth(),clubRole(), async (req,res) => {
             if(settings){
                 club.settings = settings
             }
+
+            if(displayImg){
+                club.displayImg = displayImg
+            }
+            
            
             club.save()
             res.send(club)
@@ -564,7 +569,7 @@ router.post('/',
 
         const {requester} = res.locals
         const msId = req.body.msId; // Extract the msId from the request body
-        const { name, description, getInvolved, url, color, tags, tagline, settings, logo, contact } = req.body.form; // Extract the form data from the request body
+        const { name, description, getInvolved, url, color, tags, tagline, settings, logo, contact, displayImg } = req.body.form; // Extract the form data from the request body
 
         if(tags.length == 0){
             return res.status(400).json({'errors': [{"msg": "Please add tags to make your club easily searchable"}]})
@@ -584,7 +589,7 @@ router.post('/',
             } else if (urlUsed){
                 return res.status(400).json({'errors': [{"msg": "Club URL has already been used"}]})
             } else {
-                const clubs = await new Club({name, description, getInvolved, sponsors: [msId.toString()], url: url, color, tags, tagline, settings, logo, contact})
+                const clubs = await new Club({name, description, getInvolved, sponsors: [msId.toString()], url: url, color, tags, tagline, settings, logo, contact, displayImg})
                 
                 const user = await User.findOne({msId: msId});
   
