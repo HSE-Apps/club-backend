@@ -557,7 +557,8 @@ router.post('/',
         body('form.description').notEmpty().withMessage("Please enter a description"),
         body('form.color').isHexColor().withMessage("Please use a valid color"),
         body("form.tagline").notEmpty().withMessage("Please enter a tagline").isLength({max: 100}).withMessage("Your tagline must be less than 100 characters"),
-        body('form.getInvolved').notEmpty().withMessage("Please tell us how students should get involved")
+        body('form.getInvolved').notEmpty().withMessage("Please tell us how students should get involved"),
+        body('form.contact.email').notEmpty().withMessage("Please enter an email").isEmail().withMessage("Please enter a valid email"),
     ],
     async (req,res) => {
 
