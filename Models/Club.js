@@ -19,6 +19,11 @@ const Club = new mongoose.Schema({
         required: true,
         default: "https://storage.cloud.google.com/hse-key-bucket/default.png"
     },
+    displayImg:{
+        type: String,
+        required: true,
+        default: ""
+    },
     sponsors:{
         type: [String],
         default: []

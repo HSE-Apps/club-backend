@@ -486,7 +486,8 @@ router.put('/:clubURL', auth(),clubRole(), async (req,res) => {
 
 
             let testClub = {...club, ...req.body}
-
+            
+        console.log(displayImg)
             if(name){
                 club.name = name
             }
