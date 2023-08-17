@@ -21,7 +21,7 @@ const Club = new mongoose.Schema({
     },
     displayImg:{
         type: String,
-        required: true,
+        required: false,
         default: ""
     },
     sponsors:{
