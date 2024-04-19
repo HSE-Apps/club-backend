@@ -3,8 +3,21 @@ const router = express.Router()
 const mongoose = require('mongoose')
 const axios = require('axios')
 const dotenv = require('dotenv')
+const nodemailer = require('nodemailer');
 
 dotenv.config()
+
+let transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE, // true for 465, false for other ports
+    auth: {
+        user: process.env.EMAIL_USER, // your email address
+        pass: process.env.EMAIL_PASS // your email password
+    }
+});
+
+
 
 const Club = require('../Models/Club')
 const Announcement = require('../Models/Announcement')
@@ -106,50 +119,76 @@ router.get('/:clubURL/applicants', auth(),clubRole(), async(req,res) => {
 })
 
 
-// * Sends SMS announcement to club members with phone number and notifications on
+// * Sends email announcement to club members with phone number and notifications on
 
-router.post('/:clubURL/announcement', auth(), clubRole({authLevel: 'officer'}), async(req,res) => {
-
-    console.log('hit')
-
+router.post('/:clubURL/announcement', auth(),clubRole(), async(req, res) => {
+    console.log('hit');
     try {
+        const {club} = res.locals
+        const emailMessage = {
+            from: process.env.EMAIL_FROM, // sender address
+            to: "", // list of receivers
+            subject: ` Announcement |`, // Subject line
+            text: req.body.message, // plain text body
+            html: `<b>${req.body.message}</b>` // html body
+        };
 
-        const{club, requester} = res.locals
-
-        const smsMessage = `${club.name} | ${requester.name} \n${req.body.message}`
-
-        let idList = club.officers.concat(club.members)
-
-        club.settings.smsDisabled.forEach((smsDisabledId) => {
-            idList = idList.filter((id) => !id.equals(smsDisabledId))
-        })
-
-        console.log(idList)
-
+        const members = await User.find({ msId: { $in: club.members } }, { email: 1 });
+        const sponsors = await User.find({ msId: { $in: club.sponsors } }, { email: 1 });
+        const officers = await User.find({ msId: { $in: club.officers } }, { email: 1 });
         
-        await axios.post(`${AUTH_API}/phone/aggregate`, {idList, message: smsMessage})
+        // Initialize emailList with a predefined email
+        let emailList = [""];
+        
+        // Function to add emails from query results to the email list
+        const addEmailsToList = (users) => {
+            users.forEach(user => {
+                if (user.email) {
+                    emailList.push(user.email);
+                }
+            });
+        };
+        
+        // Add emails to the list
+        addEmailsToList(members);
+        addEmailsToList(sponsors);
+        addEmailsToList(officers);
+        
+        // Now emailList contains all the emails
+        console.log(emailList);
 
+        // Filtering based on user settings similar to SMS
+        // club.settings.emailDisabled.forEach((emailDisabledId) => {
+        //     emailList = emailList.filter((email) => !email.equals(emailDisabledId))
+        // });
 
+        emailMessage.to = emailList.join(", ");
 
-        const announcement = new Announcement({club: club._id, seen: [], message: req.body.message, senderName:requester.name, date: Date.now() })
+        // Send email
+        let info = await transporter.sendMail(emailMessage);
 
+        console.log('Message sent: %s', info.messageId);
 
+        // Save the announcement in the database as before
+        // const announcement = new Announcement({
+        //     club: club._id,
+        //     seen: [],
+        //     message: req.body.message,
+        //     senderName: requester.name,
+        //     date: Date.now()
+        // });
 
-        club.announcements.push(announcement)
-
-        club.save()
-        announcement.save()
-
-        res.send(club)
+        // club.announcements.push(announcement);
+        // await club.save();
+        // await announcement.save();
+        // res.send(club);
+        res.json({message: "Email sent successfully"});
 
     } catch (err) {
-
-        console.log(err)
-        return res.status(500).json({'errors': [{"msg": "Server Error"}]})
-
+        console.log(err);
+        res.status(500).json({'errors': [{"msg": "Server Error"}]});
     }
-
-})
+});
 
 
 

@@ -18,6 +18,12 @@ const User = new mongoose.Schema({
     pendingClubs:{
         type: [mongoose.Schema.ObjectId],
         required: false
+    },
+    email:{
+        type: String,
+        required: true,
+        default: "None"
+    
     }
 })
 
