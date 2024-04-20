@@ -10,7 +10,7 @@ dotenv.config()
 let transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
-    secure: process.env.EMAIL_SECURE, // true for 465, false for other ports
+    secure: true, // true for 465, false for other ports
     auth: {
         user: process.env.EMAIL_USER, // your email address
         pass: process.env.EMAIL_PASS // your email password
@@ -122,13 +122,13 @@ router.get('/:clubURL/applicants', auth(),clubRole(), async(req,res) => {
 // * Sends email announcement to club members with phone number and notifications on
 
 router.post('/:clubURL/announcement', auth(),clubRole(), async(req, res) => {
-    console.log('hit');
     try {
         const {club} = res.locals
+      
         const emailMessage = {
-            from: process.env.EMAIL_FROM, // sender address
+            from: `${club.name} <clubshse@gmail.com>`, // sender address
             to: "", // list of receivers
-            subject: ` Announcement |`, // Subject line
+            subject: ` Announcement | ${club.name}`, // Subject line
             text: req.body.message, // plain text body
             html: `<b>${req.body.message}</b>` // html body
         };
@@ -154,8 +154,7 @@ router.post('/:clubURL/announcement', auth(),clubRole(), async(req, res) => {
         addEmailsToList(sponsors);
         addEmailsToList(officers);
         
-        // Now emailList contains all the emails
-        console.log(emailList);
+  
 
         // Filtering based on user settings similar to SMS
         // club.settings.emailDisabled.forEach((emailDisabledId) => {
