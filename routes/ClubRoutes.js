@@ -4,21 +4,41 @@ const mongoose = require('mongoose')
 const axios = require('axios')
 const dotenv = require('dotenv')
 const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 
 dotenv.config()
 
-let transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // true for 465, false for other ports
-    auth: {
-        user: process.env.EMAIL_USER, // your email address
-        pass: process.env.EMAIL_PASS // your email password
-    },
-    tls:{
-        rejectUnAuthorized:true
-    }
+const oauth2Client = new google.auth.OAuth2(
+    process.env.CLIENT_ID,
+    process.env.CLIENT_SECRET,
+    "https://developers.google.com/oauthplayground" // Redirect URL
+);
+
+oauth2Client.setCredentials({
+    refresh_token: process.env.REFRESH_TOKEN
 });
+
+async function createTransporter() {
+    const accessToken = await oauth2Client.getAccessToken();
+
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            type: 'OAuth2',
+            user: process.env.EMAIL_USER,
+            accessToken: accessToken.token,
+            clientId: process.env.CLIENT_ID,
+            clientSecret: process.env.CLIENT_SECRET,
+            refreshToken: process.env.REFRESH_TOKEN
+        },
+        tls: {
+            rejectUnauthorized: true
+        }
+    });
+
+    return transporter;
+}
+
 
 
 
@@ -123,69 +143,41 @@ router.get('/:clubURL/applicants', auth(),clubRole(), async(req,res) => {
 
 
 // * Sends email announcement to club members with phone number and notifications on
-
-router.post('/:clubURL/announcement', auth(),clubRole(), async(req, res) => {
+router.post('/:clubURL/announcement', auth(), clubRole(), async (req, res) => {
     try {
-        const {club} = res.locals
-      
+        const {club} = res.locals;
+        const transporter = await createTransporter();
         const emailMessage = {
-            from: `${club.name} <clubshse@gmail.com>`, // sender address
+            from: `${club.name} <clubshse@gmail.com>`,
             to: "", // list of receivers
-            subject: ` Announcement | ${club.name}`, // Subject line
-            text: req.body.message, // plain text body
-            html: `<b>${req.body.message}</b>` // html body
+            subject: `Announcement | ${club.name}`,
+            text: req.body.message,
+            html: `<b>${req.body.message}</b>`
         };
 
+        // Retrieve emails from database
         const members = await User.find({ msId: { $in: club.members } }, { email: 1 });
         const sponsors = await User.find({ msId: { $in: club.sponsors } }, { email: 1 });
         const officers = await User.find({ msId: { $in: club.officers } }, { email: 1 });
-        
-        // Initialize emailList with a predefined email
-        let emailList = [""];
-        
-        // Function to add emails from query results to the email list
-        const addEmailsToList = (users) => {
+
+        let emailList = [""]; // Initialize email list
+
+        // Add emails to the list
+        [members, sponsors, officers].forEach(addEmailsToList);
+
+        function addEmailsToList(users) {
             users.forEach(user => {
                 if (user.email) {
                     emailList.push(user.email);
                 }
             });
-        };
-        
-        // Add emails to the list
-        addEmailsToList(members);
-        addEmailsToList(sponsors);
-        addEmailsToList(officers);
-        
-  
-
-        // Filtering based on user settings similar to SMS
-        // club.settings.emailDisabled.forEach((emailDisabledId) => {
-        //     emailList = emailList.filter((email) => !email.equals(emailDisabledId))
-        // });
+        }
 
         emailMessage.to = emailList.join(", ");
-
-        // Send email
         let info = await transporter.sendMail(emailMessage);
 
         console.log('Message sent: %s', info.messageId);
-
-        // Save the announcement in the database as before
-        // const announcement = new Announcement({
-        //     club: club._id,
-        //     seen: [],
-        //     message: req.body.message,
-        //     senderName: requester.name,
-        //     date: Date.now()
-        // });
-
-        // club.announcements.push(announcement);
-        // await club.save();
-        // await announcement.save();
-        // res.send(club);
         res.json({message: "Email sent successfully"});
-
     } catch (err) {
         console.log(err);
         res.status(500).json({'errors': [{"msg": "Server Error"}]});
