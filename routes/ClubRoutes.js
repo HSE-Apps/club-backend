@@ -5,56 +5,31 @@ const axios = require('axios')
 const dotenv = require('dotenv')
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
-const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+
 dotenv.config()
 
-// Create a client for Secret Manager only if needed
-const client = process.env.NODE_ENV === 'production' ? new SecretManagerServiceClient() : null;
+const oauth2Client = new google.auth.OAuth2(
+    "1053667752930-okjo9g2tpa92mu7fjbi22ob7pq1e7k47.apps.googleusercontent.com",
+    "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",
+    "https://developers.google.com/oauthplayground" // Redirect URL
+);
 
-// Helper function to get configuration values
-async function getConfigValue(key) {
-  if (process.env.NODE_ENV === 'production') {
-    // Running on GCP, fetch from Secret Manager
-    const projectId = 'hse-clubs';  // Ensure this is set in your environment variables on GCP
-    const secretVersion = 'latest';
-    const secretPath = client.secretVersionPath(projectId, key, secretVersion);
+oauth2Client.setCredentials({
+    refresh_token: "1//04v7MNR8FM3zoCgYIARAAGAQSNwF-L9IreCL9k1Kc_Jk0OiNJrYVRmRTVvflaOdyqyh8eTBlu3qPGJwqO9mRS93jCofdoWp4Ly9A"
+});
 
-    const [version] = await client.accessSecretVersion({ name: secretPath });
-    return version.payload.data.toString('utf8');
-  } else {
-    // Running locally, fetch from environment variables
-    return process.env[key];
-  }
-}
-
-// Function to create an email transporter using OAuth2
 async function createTransporter() {
-    const clientId = await getConfigValue('CLIENT_ID');
-    const clientSecret = await getConfigValue('CLIENT_SECRET');
-    const refreshToken = await getConfigValue('REFRESH_TOKEN');
-    const emailUser = await getConfigValue('EMAIL_USER');
-
-    const oauth2Client = new google.auth.OAuth2(
-        clientId,
-        clientSecret,
-        "https://developers.google.com/oauthplayground"
-    );
-
-    oauth2Client.setCredentials({
-        refresh_token: refreshToken
-    });
-
     const accessToken = await oauth2Client.getAccessToken();
 
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
             type: 'OAuth2',
-            user: emailUser,
+            user: "admin@hseapps.org",
             accessToken: accessToken.token,
-            clientId,
-            clientSecret,
-            refreshToken
+            clientId: "1053667752930-okjo9g2tpa92mu7fjbi22ob7pq1e7k47.apps.googleusercontent.com",
+            clientSecret: "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",
+            refreshToken: "1//04v7MNR8FM3zoCgYIARAAGAQSNwF-L9IreCL9k1Kc_Jk0OiNJrYVRmRTVvflaOdyqyh8eTBlu3qPGJwqO9mRS93jCofdoWp4Ly9A"
         },
         tls: {
             rejectUnauthorized: true
@@ -63,7 +38,6 @@ async function createTransporter() {
 
     return transporter;
 }
-
 
 
 
