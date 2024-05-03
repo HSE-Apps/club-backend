@@ -5,31 +5,56 @@ const axios = require('axios')
 const dotenv = require('dotenv')
 const nodemailer = require('nodemailer');
 const { google } = require('googleapis');
-
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 dotenv.config()
 
-const oauth2Client = new google.auth.OAuth2(
-    process.env.CLIENT_ID,
-    process.env.CLIENT_SECRET,
-    "https://developers.google.com/oauthplayground" // Redirect URL
-);
+// Create a client for Secret Manager only if needed
+const client = process.env.NODE_ENV === 'production' ? new SecretManagerServiceClient() : null;
 
-oauth2Client.setCredentials({
-    refresh_token: process.env.REFRESH_TOKEN
-});
+// Helper function to get configuration values
+async function getConfigValue(key) {
+  if (process.env.NODE_ENV === 'production') {
+    // Running on GCP, fetch from Secret Manager
+    const projectId = 'hse-clubs';  // Ensure this is set in your environment variables on GCP
+    const secretVersion = 'latest';
+    const secretPath = client.secretVersionPath(projectId, key, secretVersion);
 
+    const [version] = await client.accessSecretVersion({ name: secretPath });
+    return version.payload.data.toString('utf8');
+  } else {
+    // Running locally, fetch from environment variables
+    return process.env[key];
+  }
+}
+
+// Function to create an email transporter using OAuth2
 async function createTransporter() {
+    const clientId = await getConfigValue('CLIENT_ID');
+    const clientSecret = await getConfigValue('CLIENT_SECRET');
+    const refreshToken = await getConfigValue('REFRESH_TOKEN');
+    const emailUser = await getConfigValue('EMAIL_USER');
+
+    const oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        "https://developers.google.com/oauthplayground"
+    );
+
+    oauth2Client.setCredentials({
+        refresh_token: refreshToken
+    });
+
     const accessToken = await oauth2Client.getAccessToken();
 
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
             type: 'OAuth2',
-            user: process.env.EMAIL_USER,
+            user: emailUser,
             accessToken: accessToken.token,
-            clientId: process.env.CLIENT_ID,
-            clientSecret: process.env.CLIENT_SECRET,
-            refreshToken: process.env.REFRESH_TOKEN
+            clientId,
+            clientSecret,
+            refreshToken
         },
         tls: {
             rejectUnauthorized: true
@@ -38,6 +63,7 @@ async function createTransporter() {
 
     return transporter;
 }
+
 
 
 
